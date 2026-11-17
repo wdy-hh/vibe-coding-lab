@@ -1,0 +1,29 @@
+﻿# Obsidian temporary workspace
+notes/.obsidian/workspace.json
+notes/.obsidian/workspace-mobile.json
+notes/.obsidian/cache/
+
+# Windows system files
+Thumbs.db
+desktop.ini
+
+# Sensitive files
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# JavaScript dependencies
+node_modules/
+dist/
+build/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Temporary files
+*.tmp
