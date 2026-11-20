@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#080d17" />
+    <title>Vibe Coding Lab · 在线演示</title>
+    <style>
+      :root { color-scheme: dark; font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; color: #e5eefb; background: #080d17; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; background: radial-gradient(ellipse at 75% 25%, #19283e, transparent 60%); }
+      main { max-width: 780px; margin: 0 auto; padding: 12vh 28px 48px; }
+      .brand { color: #8bdde9; font-size: .875rem; letter-spacing: .12em; }
+      h1 { font-size: clamp(2rem, 6vw, 3.5rem); font-weight: 600; line-height: 1.25; margin: 30px 0 24px; }
+      p { color: #a6b8d0; line-height: 1.9; font-size: 1rem; }
+      .project { margin-top: 38px; padding: 28px; border: 1px solid #33435e; border-radius: 12px; background: #0e1929; }
+      h2 { font-size: 1.3rem; margin: 0 0 10px; }
+      a { color: #9cecf2; text-underline-offset: 4px; }
+      .start { display: inline-block; padding: 13px 19px; margin: 12px 18px 10px 0; border-radius: 6px; color: #071c27; background: #8be5ec; text-decoration: none; font-size: 1rem; font-weight: 600; }
+      a:focus-visible { outline: 2px solid #baa5ff; outline-offset: 5px; }
+      .note { font-size: .875rem; color: #859bb9; margin-top: 28px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="brand">VIBE CODING LAB · LIVE DEMOS</div>
+      <h1>把真实双手，<br />变成悬浮粒子。</h1>
+      <p>在浏览器中体验摄像头驱动的 2.5D 手部表面粒子。无需额外传感器，可调整外层粒子的悬浮与发散幅度。</p>
+      <section class="project">
+        <h2>Gesture Particle System</h2>
+        <p>使用电脑端 Chrome 或 Edge 打开，点击 Start Camera 并允许摄像头。视频在本机处理，不上传、不录制。</p>
+        <a class="start" href="projects/gesture-particle-system/">打开在线体验</a>
+        <a href="https://github.com/wdy-hh/vibe-coding-lab/tree/main/projects/gesture-particle-system">查看源码与说明</a>
+      </section>
+      <p class="note">v0.2.0 · 当前完成双手追踪与粒子表面。深度为模型估计与程序化厚度，不是真实三维扫描。</p>
+    </main>
+  </body>
+</html>
