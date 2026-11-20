@@ -1,0 +1,17 @@
+export const VISION_CONFIG = {
+  numHands: 2,
+  detectionConfidence: 0.5,
+  presenceConfidence: 0.5,
+  trackingConfidence: 0.5,
+  handednessThreshold: 0.6,
+  inferenceFps: 30,
+  identityRetentionMs: 900,
+  identityDistanceGate: 0.4,
+  handednessPenalty: 0.32,
+  handednessConfirmFrames: 5,
+  smoothingCutoffHz: 5,
+  smoothingSpeedGain: 8,
+  smoothingResetMs: 180,
+  staleResultMs: 250,
+  stalledVideoMs: 5000,
+} as const;

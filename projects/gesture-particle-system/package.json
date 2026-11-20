@@ -1,0 +1,29 @@
+{
+  "name": "gesture-particle-system",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "assets:prepare": "node scripts/sync-vision-assets.mjs",
+    "assets:download": "node scripts/sync-vision-assets.mjs --download",
+    "predev": "npm run assets:prepare",
+    "dev": "vite --host 127.0.0.1 --port 5173 --strictPort",
+    "check": "tsc --noEmit",
+    "test": "node --test tests/unit/*.test.ts",
+    "prebuild": "npm run assets:prepare",
+    "build": "npm run check && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "1.2.3",
+    "three": "0.187.0"
+  },
+  "devDependencies": {
+    "@types/three": "0.187.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.8"
+  }
+}

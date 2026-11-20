@@ -1,0 +1,28 @@
+Gesture Particle System — Phase 0 / 1 / 2
+
+Application modules were written for this project. No code from the community
+repositories listed in DEVELOPMENT_SPEC.md was copied.
+
+MediaPipe Tasks Vision 1.2.3
+Copyright The MediaPipe Authors. Apache License, Version 2.0.
+https://github.com/google-ai-edge/mediapipe
+Runtime JavaScript/WASM files in public/wasm are copied without modification
+from the pinned official npm package. See public/licenses/Apache-2.0.txt.
+
+Hand Landmarker full model, float16 / version 1
+Downloaded without modification from Google's official MediaPipe model storage.
+Source URL, byte length and SHA-256 are in vision-assets.lock.json.
+Model card (license: Apache License, Version 2.0):
+https://storage.googleapis.com/mediapipe-assets/Model%20Card%20Hand%20Tracking%20(Lite_Full)%20with%20Fairness%20Oct%202021.pdf
+Estimated landmarks and world coordinates do not constitute a skin mesh or a
+true depth scan.
+
+Three.js 0.187.0, MIT License
+Copyright 2010-2026 Three.js Authors.
+See public/licenses/Three-MIT.txt (copied verbatim from installed package).
+Used for Phase 2's BufferGeometry / Points / ShaderMaterial particle renderer.
+The retained skeleton debug overlay uses Canvas 2D.
+
+Build dependencies (Vite, TypeScript and transitive dependencies) retain their
+own licenses within node_modules. Exact package provenance/integrity is recorded
+in package-lock.json.
