@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Phase 2 · 合成手形 GPU 验证</title>
+    <style>
+      :root { color-scheme: dark; font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; background: #070c15; color: #dce8f7; }
+      body { max-width: 1100px; margin: 24px auto; padding: 0 24px; }
+      h1 { font-size: 1.4rem; font-weight: 550; margin-bottom: 12px; }
+      p { font-size: 1rem; line-height: 1.7; color: #94a7bf; }
+      .actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin: 20px 0; }
+      button { font: inherit; font-size: .875rem; padding: 10px 16px; border: 1px solid #3d586d; border-radius: 6px; background: #142232; color: #bdeef5; cursor: pointer; }
+      button:disabled { opacity: .4; cursor: default; }
+      button:focus-visible { outline: 2px solid #b6a6ff; outline-offset: 3px; }
+      #stage { position: relative; width: 100%; aspect-ratio: 16 / 10; background: #01040a; border: 1px solid #203249; border-radius: 8px; overflow: hidden; }
+      #host, #host canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+      .stage-label { position: absolute; top: 18px; left: 20px; font-size: .875rem; letter-spacing: .06em; color: #7895ac; pointer-events: none; }
+      #summary { color: #87e9dc; }
+      #results { font-size: .875rem; color: #97aac1; line-height: 1.9; padding-left: 22px; }
+      a { color: #82e3f1; }
+    </style>
+  </head>
+  <body>
+    <h1>Phase 2 · 手部表面 GPU 验证</h1>
+    <p>此页使用项目自制的合成关键点，不开启摄像头。它验证表面与渲染逻辑，不能替代真实双手追踪验收。</p>
+    <div class="actions">
+      <button id="run">运行 GPU 验证</button>
+      <button id="bend" disabled>切换弯指</button>
+      <label><input id="mirror" type="checkbox" />镜像</label>
+      <label>悬浮外散 <input id="spread" type="range" min="0" max="100" step="5" value="65" /></label>
+      <a href="/">返回摄像头实验台</a>
+    </div>
+    <div id="stage"><div id="host"></div><span class="stage-label">SYNTHETIC GEOMETRY · NO CAMERA · 20,000 SURFACE + 42 JOINTS</span></div>
+    <p id="summary" role="status">等待 GPU 验证</p>
+    <ol id="results"></ol>
+    <script type="module" src="./surface-smoke.ts"></script>
+  </body>
+</html>

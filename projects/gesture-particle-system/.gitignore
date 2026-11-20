@@ -1,0 +1,17 @@
+/node_modules/
+/dist/
+/work/
+/outputs/
+
+# Generated from the pinned MediaPipe npm package before dev/build.
+/public/wasm/
+/public/vision-assets.json
+
+*.log
+*.download
+.DS_Store
+Thumbs.db
+desktop.ini
+.env
+.env.*
+!.env.example
