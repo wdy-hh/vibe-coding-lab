@@ -1,0 +1,22 @@
+import { access, cp, mkdir, realpath, rm, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const projectRoot = fileURLToPath(new URL('../', import.meta.url));
+const repositoryRoot = await realpath(path.resolve(projectRoot, '../..'));
+const landingPage = path.join(repositoryRoot, 'site/index.html');
+const appDist = path.join(projectRoot, 'dist');
+await access(landingPage);
+await access(path.join(appDist, 'index.html'));
+const buildRoot = path.join(repositoryRoot, 'build');
+await mkdir(buildRoot, { recursive: true });
+if (await realpath(buildRoot) !== buildRoot) throw new Error('Refusing a redirected build directory.');
+const pagesRoot = path.join(buildRoot, 'pages');
+const existing = await realpath(pagesRoot).catch((error) => { if (error.code === 'ENOENT') return null; throw error; });
+if (path.dirname(pagesRoot) !== buildRoot || (existing && existing !== pagesRoot)) throw new Error('Refusing an unexpected Pages output path.');
+await rm(pagesRoot, { recursive: true, force: true });
+await mkdir(pagesRoot, { recursive: true });
+await cp(landingPage, path.join(pagesRoot, 'index.html'));
+await cp(appDist, path.join(pagesRoot, 'projects/gesture-particle-system'), { recursive: true });
+await writeFile(path.join(pagesRoot, '.nojekyll'), '');
+console.log(`Prepared Pages site: ${pagesRoot}`);

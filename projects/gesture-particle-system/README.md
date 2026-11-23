@@ -4,6 +4,10 @@
 
 当前版本：**v0.2.0 · Phase 2：手部表面粒子化**。项目由 Vite、TypeScript、MediaPipe Hand Landmarker、Three.js 和 GLSL 构建，全部推理在浏览器本机完成。
 
+**[点击在线体验](https://wdy-hh.github.io/vibe-coding-lab/projects/gesture-particle-system/)**
+
+电脑端用 Chrome / Edge 打开，点击 **Start Camera** 并允许摄像头，即可测试真实双手。不需要先下载源码或启动本地终端。发布状态可在仓库的 [Actions](https://github.com/wdy-hh/vibe-coding-lab/actions/workflows/deploy-pages.yml) 查看。
+
 ![双手悬浮粒子效果](docs/images/floating-hands.jpg)
 
 *效果图使用项目自制的合成关键点，展示表面与悬浮外散渲染；实际应用由真实摄像头双手驱动，合成测试不替代摄像头验收。*
@@ -127,14 +131,17 @@ gesture-particle-system/
 - [技术架构与坐标约定](docs/ARCHITECTURE.md)
 - [测试范围与手动验收](docs/TESTING.md)
 - [完整产品需求、技术约束与阶段计划](DEVELOPMENT_SPEC.md)
+- [GitHub Pages 部署说明](docs/DEPLOYMENT.md)
 
 ## 后续计划
 
 - Phase 3：独立手势分类器与状态机，加入张掌、握拳、捏合和双手能量连接。
 - Phase 4：正式 Hologram / AR 展示模式、后处理与展示 UI。
-- Phase 5：持续性能测量、质量档位、长时间稳定性验证与部署。
+- Phase 5：持续性能测量、质量档位、长时间稳定性验证与进一步部署。
 
 上述为后续开发计划，当前版本尚未实现。任何后续特效都应叠加在持续更新的真实手部表面之上。
+
+GitHub Pages 在线演示是提前提供的体验入口，不代表后续性能与稳定性阶段已完成。
 
 ## 隐私与许可证
 
