@@ -1,5 +1,6 @@
+import type { AiErrorInfo, CopyTone } from '../shared/ai';
+export type { CopyTone };
 export type VisualStyleId = 'promo-red' | 'minimal-white' | 'luxury-black' | 'fresh-green';
-export type CopyTone = 'promo' | 'minimal' | 'lifestyle' | 'professional';
 export type ViewId = 'studio' | 'templates' | 'history';
 
 export interface ProductItem {
@@ -12,13 +13,16 @@ export interface ProductItem {
   highlights: string;
   badgeText: string;
   imageUrl: string;
-  status: 'draft' | 'generating' | 'generated' | 'approved';
+  status: 'draft' | 'queued' | 'generating' | 'generated' | 'approved' | 'failed';
+  generationError?: AiErrorInfo & { retryMode?: 'full' | 'copy' | number };
   generated?: {
     seoTitle: string;
     posterTitle: string;
     sellingPoints: string[];
     visualStyle: VisualStyleId;
     updatedAt: string;
+    warnings?: string[];
+    source?: 'real' | 'mock';
   };
 }
 

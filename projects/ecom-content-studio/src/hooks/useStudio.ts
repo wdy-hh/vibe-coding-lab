@@ -4,6 +4,11 @@ import { createDemoProducts, createInitialState } from '../data/demoData';
 import { loadState, saveState } from '../utils/storage';
 import { createId } from '../utils/id';
 import { mockGenerate } from '../utils/mockGenerator';
+import { useAiMode } from './useAiMode';
+import { AiClientError, createGeneratePayload, generateProductCopy, regenerateSellingPoint } from '../utils/aiClient';
+import { mergeGeneratedCopy, processGenerationQueue } from '../utils/generation';
+import type { GenerationMode } from '../utils/generation';
+import type { AiMode, FullCopyResult, SellingPointResult } from '../../shared/ai';
 
 export function validateProduct(item: ProductItem): ProductErrors {
   const errors: ProductErrors = {};
@@ -13,10 +18,24 @@ export function validateProduct(item: ProductItem): ProductErrors {
   return errors;
 }
 
-export type GenerationMode = 'full' | 'copy' | number;
+export type { GenerationMode } from '../utils/generation';
 const hasGeneratedCopy = (item: ProductItem) => Boolean(item.generated?.seoTitle.trim() && item.generated.sellingPoints.some(point => point.trim()));
 
+async function requestCopy(item: ProductItem, template: TemplateAsset | undefined, mode: GenerationMode, source: AiMode, signal: AbortSignal): Promise<FullCopyResult | SellingPointResult> {
+  if (source === 'real') {
+    const pointIndex = typeof mode === 'number' && item.generated ? mode : undefined;
+    const payload = createGeneratePayload(item, template, pointIndex);
+    return pointIndex === undefined ? generateProductCopy(payload, { signal }) : regenerateSellingPoint(payload, { signal });
+  }
+  const result = await mockGenerate(item, template);
+  if (signal.aborted) throw new AiClientError('CANCELLED');
+  return typeof mode === 'number' && item.generated ? { sellingPoint: result.sellingPoints[mode % 3] } : { seoTitle: result.seoTitle, posterTitle: result.posterTitle, sellingPoints: result.sellingPoints, warnings: [] };
+}
+
+const generationFailure = (error: unknown) => error instanceof AiClientError ? error : new AiClientError('UPSTREAM_ERROR');
+
 export function useStudio() {
+  const ai = useAiMode();
   const [initial] = useState(loadState);
   const [state, setState] = useState<StudioState>(initial.state);
   const [view, setView] = useState<ViewId>('studio');
@@ -30,6 +49,7 @@ export function useStudio() {
   const stateRef = useRef(state);
   stateRef.current = state;
   const busyRef = useRef(false);
+  const generationController = useRef<AbortController | null>(null);
   const toastTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const notify = useCallback((message: string, kind: ToastKind = 'success') => {
@@ -38,6 +58,7 @@ export function useStudio() {
     toastTimers.current.push(setTimeout(() => setToasts(previous => previous.filter(toast => toast.id !== id)), 4200));
   }, []);
   useEffect(() => () => toastTimers.current.forEach(clearTimeout), []);
+  useEffect(() => () => generationController.current?.abort(), []);
   useEffect(() => {
     setSaveStatus('saving');
     const timeout = setTimeout(() => {
@@ -61,13 +82,13 @@ export function useStudio() {
     setState(previous => ({ ...previous, workspace: { ...previous.workspace, items: previous.workspace.items.map(item => item.id === id ? updater(item) : item) } }));
   }, []);
   const patchProduct = (id: string, patch: Partial<ProductItem>) => {
-    updateProduct(id, item => ({ ...item, ...patch, status: hasGeneratedCopy(item) ? 'generated' : 'draft' }));
+    updateProduct(id, item => ({ ...item, ...patch, generationError: undefined, status: hasGeneratedCopy(item) ? 'generated' : 'draft' }));
     setErrors(previous => Object.fromEntries(Object.entries(previous).filter(([key]) => !(key in patch))));
   };
   const patchGenerated = (id: string, patch: Partial<NonNullable<ProductItem['generated']>>) => {
     updateProduct(id, item => {
       const generated = { seoTitle: '', posterTitle: item.name, sellingPoints: [], visualStyle: activeTemplate?.visualStyle ?? 'minimal-white', ...item.generated, ...patch, updatedAt: new Date().toISOString() };
-      return { ...item, generated, status: generated.seoTitle.trim() && generated.sellingPoints.some(point => point.trim()) ? 'generated' : 'draft' };
+      return { ...item, generated, generationError: undefined, status: generated.seoTitle.trim() && generated.sellingPoints.some(point => point.trim()) ? 'generated' : 'draft' };
     });
   };
   const selectProduct = (id: string) => {
@@ -99,53 +120,73 @@ export function useStudio() {
   };
   const reset = () => { if (busyRef.current) return; setState(createInitialState()); setWorkspaceRevision(previous => previous + 1); setErrors({}); setView('studio'); notify('已恢复默认演示数据'); };
 
-  const generate = async (mode: GenerationMode = 'full') => {
-    if (busyRef.current) return;
+  const generate = async (mode: GenerationMode = 'full', productId?: string) => {
+    if (busyRef.current || ai.aiChecking) return;
     const snapshot = stateRef.current;
-    const item = snapshot.workspace.items.find(product => product.id === snapshot.workspace.activeId);
+    const item = snapshot.workspace.items.find(product => product.id === (productId ?? snapshot.workspace.activeId));
     if (!item) return;
+    selectProduct(item.id);
     const validation = validateProduct(item);
     if (Object.keys(validation).length) { setErrors(validation); notify('请先补全商品名称、类目和图片', 'error'); return; }
     busyRef.current = true; setBusy(true);
-    updateProduct(item.id, product => ({ ...product, status: 'generating' }));
+    const controller = new AbortController(); generationController.current = controller;
+    const source = ai.aiMode;
+    const template = snapshot.templates.find(template => template.id === snapshot.workspace.templateId);
+    updateProduct(item.id, product => ({ ...product, status: 'generating', generationError: undefined }));
     try {
-      const result = await mockGenerate(item, snapshot.templates.find(template => template.id === snapshot.workspace.templateId));
+      const result = await requestCopy(item, template, mode, source, controller.signal);
       updateProduct(item.id, product => {
-        let generated = result;
-        if (product.generated && mode === 'copy') generated = { ...product.generated, seoTitle: result.seoTitle, sellingPoints: result.sellingPoints, updatedAt: result.updatedAt };
-        if (product.generated && typeof mode === 'number') generated = { ...product.generated, sellingPoints: product.generated.sellingPoints.map((point, index) => index === mode ? result.sellingPoints[mode % 3] : point), updatedAt: result.updatedAt };
-        return { ...product, status: 'generated', generated };
+        const generated = mergeGeneratedCopy(product, mode, result, source, product.generated?.visualStyle ?? template?.visualStyle ?? 'minimal-white');
+        return { ...product, status: 'generated', generationError: undefined, generated };
       });
-      notify(typeof mode === 'number' ? '已为这条卖点换一种表达' : mode === 'copy' ? '已生成新一版文案' : '商品素材已生成，试试切换主图风格');
+      notify(typeof mode === 'number' ? '已替换这条卖点，其余编辑内容已保留' : source === 'real' ? 'GLM-5.3-Flash 已生成商品文案，请核对后使用' : '模拟素材已生成，试试切换主图风格');
     } catch (error) {
-      updateProduct(item.id, product => ({ ...product, status: product.generated ? 'generated' : 'draft' }));
-      notify(error instanceof Error ? error.message : '生成失败，请重试', 'error');
-    } finally { busyRef.current = false; setBusy(false); }
+      const failure = generationFailure(error);
+      if (controller.signal.aborted) {
+        updateProduct(item.id, product => ({ ...product, status: item.status, generationError: item.generationError }));
+        notify('已停止生成，原有商品信息与文案已保留', 'info');
+      } else {
+        updateProduct(item.id, product => ({ ...product, status: 'failed', generationError: { code: failure.code, message: failure.message, retryAfter: failure.retryAfter, requestId: failure.requestId, retryMode: mode } }));
+        notify(failure.message, 'error');
+      }
+    } finally { generationController.current = null; busyRef.current = false; setBusy(false); }
   };
 
   const generateAll = async () => {
-    if (busyRef.current || !stateRef.current.workspace.items.length) return;
+    if (busyRef.current || ai.aiChecking || !stateRef.current.workspace.items.length) return;
     const snapshot = stateRef.current;
     const invalid = snapshot.workspace.items.find(item => Object.keys(validateProduct(item)).length);
     if (invalid) { selectProduct(invalid.id); setErrors(validateProduct(invalid)); notify(`请先补全「${invalid.name || '未命名商品'}」的必填信息`, 'error'); return; }
     busyRef.current = true; setBusy(true);
+    const source = ai.aiMode;
+    const controller = new AbortController(); generationController.current = controller;
     const template = snapshot.templates.find(asset => asset.id === snapshot.workspace.templateId);
-    let processing: ProductItem | null = null;
+    setState(previous => ({ ...previous, workspace: { ...previous.workspace, items: previous.workspace.items.map(item => ({ ...item, status: 'queued', generationError: undefined })) } }));
     try {
-      for (let index = 0; index < snapshot.workspace.items.length; index++) {
-        const item = snapshot.workspace.items[index]; processing = item;
+      const summary = await processGenerationQueue(snapshot.workspace.items, async (item, index) => {
         setBatchProgress({ current: index + 1, total: snapshot.workspace.items.length });
         setState(previous => ({ ...previous, workspace: { ...previous.workspace, activeId: item.id } }));
-        updateProduct(item.id, product => ({ ...product, status: 'generating' }));
-        const generated = await mockGenerate(item, template);
-        updateProduct(item.id, product => ({ ...product, generated, status: 'generated' }));
-      }
-      notify(`已完成 ${snapshot.workspace.items.length} 款商品的批量生成`);
-    } catch {
-      if (processing) updateProduct(processing.id, product => ({ ...product, status: product.generated ? 'generated' : 'draft' }));
-      notify('批量生成中断，已完成的素材已保留，请重试', 'error');
-    } finally { busyRef.current = false; setBusy(false); setBatchProgress(null); }
+        updateProduct(item.id, product => ({ ...product, status: 'generating', generationError: undefined }));
+        const result = await requestCopy(item, template, 'full', source, controller.signal);
+        updateProduct(item.id, product => ({ ...product, generated: mergeGeneratedCopy(product, 'full', result, source, product.generated?.visualStyle ?? template?.visualStyle ?? 'minimal-white'), status: 'generated', generationError: undefined }));
+      }, (item, error) => {
+        const failure = generationFailure(error);
+        updateProduct(item.id, product => ({ ...product, status: 'failed', generationError: { code: failure.code, message: failure.message, retryAfter: failure.retryAfter, requestId: failure.requestId } }));
+      }, controller.signal);
+      if (summary.cancelled) notify(`已停止批量生成，已完成 ${summary.success} 款，其余内容已保留`, 'info');
+      else if (summary.failed) notify(`${summary.success} 款生成成功，${summary.failed} 款失败可重试；已保留全部商品信息`, summary.success ? 'info' : 'error');
+      else notify(`已完成 ${summary.success} 款商品的${source === 'real' ? ' AI ' : '模拟'}批量生成`);
+    } finally {
+      setState(previous => ({ ...previous, workspace: { ...previous.workspace, items: previous.workspace.items.map(item => {
+        if (!['queued', 'generating'].includes(item.status)) return item;
+        const original = snapshot.workspace.items.find(product => product.id === item.id);
+        return { ...item, status: original?.status ?? (hasGeneratedCopy(item) ? 'generated' : 'draft'), generationError: original?.generationError };
+      }) } }));
+      generationController.current = null; busyRef.current = false; setBusy(false); setBatchProgress(null);
+    }
   };
+  const cancelGeneration = () => generationController.current?.abort();
+  const retryProduct = (id: string) => generate(stateRef.current.workspace.items.find(item => item.id === id)?.generationError?.retryMode ?? 'full', id);
 
   const applyTemplate = (templateId: string) => {
     if (busyRef.current) return;
@@ -199,7 +240,7 @@ export function useStudio() {
     updateProduct(selected.id, item => ({ ...item, status: 'approved' }));
     notify('商品已定稿，记得保存当前批次到历史');
   };
-  return { state, view, setView, workspaceRevision, selected, activeTemplate, toasts, setToasts, notify, errors, busy, batchProgress, saveStatus, storageError, patchProduct, patchGenerated, selectProduct, addProduct, deleteProduct, loadDemo, reset, generate, generateAll, applyTemplate, saveTemplate, deleteTemplate, saveBatch, openBatch, deleteBatch, appendProducts, approve };
+  return { ...ai, state, view, setView, workspaceRevision, selected, activeTemplate, toasts, setToasts, notify, errors, busy, batchProgress, saveStatus, storageError, patchProduct, patchGenerated, selectProduct, addProduct, deleteProduct, loadDemo, reset, generate, generateAll, cancelGeneration, retryProduct, applyTemplate, saveTemplate, deleteTemplate, saveBatch, openBatch, deleteBatch, appendProducts, approve };
 }
 
 export type Studio = ReturnType<typeof useStudio>;

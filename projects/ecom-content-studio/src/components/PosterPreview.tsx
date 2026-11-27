@@ -26,7 +26,7 @@ export function PosterPreview({ studio }: { studio: Studio }) {
       canvas.getContext('2d')?.drawImage(offscreen, 0, 0);
     }).catch(error => { if (!cancelled) setRenderError(error instanceof Error ? error.message : '画布渲染失败'); }).finally(() => { if (!cancelled) setRendering(false); });
     return () => { cancelled = true; };
-  }, [selected, style]);
+  }, [selected?.id, selected?.name, selected?.imageUrl, selected?.highlights, selected?.badgeText, selected?.generated?.posterTitle, style]);
   const exportImage = async () => {
     if (!selected || exporting || busy) return;
     if (!selected.imageUrl) { studio.notify('请先上传商品图片再导出主图', 'error'); return; }
@@ -40,7 +40,8 @@ export function PosterPreview({ studio }: { studio: Studio }) {
     {selected ? <>
       <div className="canvas-area"><div className="canvas-toolbar"><span><Image size={13} />商品主图</span><span>1:1 <span className="toolbar-dot">·</span> 800 × 800 px</span></div>
         <div className="canvas-wrap"><canvas ref={canvasRef} width={800} height={800} role="img" aria-label={`${selected.name || '商品'}的800乘800主图预览`} />
-          {(rendering || selected.status === 'generating') && <div className="canvas-loading" aria-live="polite"><Spinner size={21} /><span>{selected.status === 'generating' ? '正在构思你的商品素材…' : '正在更新画布…'}</span></div>}
+          {rendering && <div className="canvas-loading" aria-live="polite"><Spinner size={21} /><span>正在更新画布…</span></div>}
+          {selected.status === 'generating' && <div className="canvas-generation-label" aria-live="polite"><Spinner size={15} /><span>{studio.aiMode === 'real' ? 'AI 生成中，当前预览已保留' : '正在生成模拟素材…'}</span></div>}
           {renderError && <div className="canvas-error" role="alert">{renderError}</div>}
           <button className="canvas-expand" title="查看原尺寸主图" aria-label="放大查看主图" disabled={rendering || !!renderError} onClick={() => { if (canvasRef.current) { setExpandedUrl(canvasRef.current.toDataURL('image/png')); setExpanded(true); } }}><Maximize2 size={15} /></button>
         </div><div className="canvas-caption"><span>所见即所得，导出高清原图</span><span className="resolution-tag">PNG</span></div>

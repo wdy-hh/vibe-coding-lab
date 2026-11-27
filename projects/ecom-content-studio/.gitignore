@@ -4,3 +4,7 @@ dist/
 *.tsbuildinfo
 .qa/
 *.log
+.env
+.env.local
+.env.*.local
+.deploy/

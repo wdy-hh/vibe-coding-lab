@@ -19,6 +19,8 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const request = event.request;
   if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
+  // Health and generation requests must always reach the current server.
+  if (new URL(request.url).pathname.startsWith(new URL('api/', self.registration.scope).pathname)) return;
   if (request.mode === 'navigate') {
     // Fetch fresh HTML online so it always references the currently deployed bundle.
     // A short timeout also handles hosts that stop responding while offline.

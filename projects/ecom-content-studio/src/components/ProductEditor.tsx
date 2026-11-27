@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, ImagePlus, Layers3, Package, Plus, Sparkles, Trash2, Upload, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, ImagePlus, Layers3, Package, Plus, RotateCw, Sparkles, Trash2, Upload, X } from 'lucide-react';
 import type { Studio } from '../hooks/useStudio';
 import { CATEGORIES } from '../data/demoData';
 import { Spinner, StatusBadge } from './Common';
@@ -35,8 +35,9 @@ export function ProductEditor({ studio }: { studio: Studio }) {
     <div className="product-queue" aria-label="当前批次商品队列">{state.workspace.items.map((item, index) => <div className={`queue-row ${item.id === selected?.id ? 'is-selected' : ''}`} key={item.id}>
       <button className="queue-select" disabled={busy} onClick={() => { setUploadError(''); studio.selectProduct(item.id); }} aria-pressed={item.id === selected?.id}>
         <span className={`queue-thumb thumb-${index % 3}`}>{item.imageUrl ? <img src={item.imageUrl} alt="" /> : <ImagePlus size={22} />}</span>
-        <span className="queue-info"><strong>{item.name || '未命名商品'}</strong><StatusBadge status={item.status} /></span>
+        <span className="queue-info"><strong>{item.name || '未命名商品'}</strong><StatusBadge status={item.status} ai={studio.aiMode === 'real'} /></span>
       </button><button className="queue-delete icon-button" disabled={busy} title={`删除${item.name || '商品'}`} aria-label={`删除${item.name || '未命名商品'}`} onClick={() => studio.deleteProduct(item.id)}><X size={14} /></button>
+      {item.status === 'failed' && <button className="queue-retry" disabled={busy || studio.aiChecking} aria-label={`重试${item.name || '未命名商品'}`} title={item.generationError?.message} onClick={() => { void studio.retryProduct(item.id); }}><RotateCw size={12} />重试</button>}
     </div>)}{!state.workspace.items.length && <div className="queue-empty">还没有商品，添加一个开始吧</div>}</div>
     {selected ? <div className="product-form" key={selected.id}>
       <div className="form-section-title"><span>基础信息</span><small><i /> 为必填项</small></div>
@@ -65,8 +66,9 @@ export function ProductEditor({ studio }: { studio: Studio }) {
         <div className="template-select-label"><label className="field-label" htmlFor="template-select"><Layers3 size={14} />文案生成模板</label><span>可复用</span></div>
         <select id="template-select" value={state.workspace.templateId} onChange={event => studio.applyTemplate(event.target.value)}><option value="">系统默认生成</option>{state.templates.map(template => <option value={template.id} key={template.id}>{template.name}</option>)}</select>
       </fieldset>
-      <button className="button button-primary generate-button" onClick={() => { void studio.generate(); }} disabled={busy || readingImage}>{busy ? <Spinner /> : <Sparkles size={17} />}{busy ? '正在生成素材…' : '生成当前商品素材'}</button>
-      <p className="generation-note">模拟智能生成 · 支持自由编辑与导出</p>
+      {selected.generationError && <div className="generation-error" role="alert">{selected.generationError.message}</div>}
+      <button className="button button-primary generate-button" onClick={() => { if (selected.status === 'failed') void studio.retryProduct(selected.id); else void studio.generate(); }} disabled={busy || readingImage || studio.aiChecking}>{busy || studio.aiChecking ? <Spinner /> : <Sparkles size={17} />}{studio.aiChecking ? '正在检测 AI 服务…' : busy ? studio.aiMode === 'real' ? 'AI 生成中…' : '正在生成素材…' : selected.status === 'failed' ? '重试上次生成' : '生成当前商品素材'}</button>
+      <p className="generation-note">{studio.aiMode === 'real' ? 'GLM-5.3-Flash · 生成后可自由编辑' : '本地模拟生成 · 无需连接 AI 接口'}</p>
     </div> : <div className="product-form"><button className="button button-primary full-width" onClick={studio.addProduct}><Plus size={16} />添加第一个商品</button></div>}
   </section>;
 }

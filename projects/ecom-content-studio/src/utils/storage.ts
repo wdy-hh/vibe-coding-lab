@@ -9,12 +9,15 @@ const hasStrings = (value: Record<string, unknown>, keys: string[]) => keys.ever
 
 function isProduct(value: unknown): value is ProductItem {
   if (!isRecord(value) || !hasStrings(value, ['id', 'name', 'category', 'material', 'specs', 'audience', 'highlights', 'badgeText', 'imageUrl', 'status'])) return false;
-  if (!['draft', 'generating', 'generated', 'approved'].includes(String(value.status))) return false;
+  if (!['draft', 'queued', 'generating', 'generated', 'approved', 'failed'].includes(String(value.status))) return false;
+  if (value.generationError !== undefined && (!isRecord(value.generationError) || !hasStrings(value.generationError, ['code', 'message']))) return false;
   if (value.imageUrl && !/^data:image\/(png|jpeg|webp|svg\+xml)[;,]/i.test(String(value.imageUrl))) return false;
   if (value.generated !== undefined) {
     const generated = value.generated;
     if (!isRecord(generated) || !hasStrings(generated, ['seoTitle', 'posterTitle', 'visualStyle', 'updatedAt']) || !visualIds.has(String(generated.visualStyle))) return false;
     if (!Array.isArray(generated.sellingPoints) || !generated.sellingPoints.every(point => typeof point === 'string')) return false;
+    if (generated.warnings !== undefined && (!Array.isArray(generated.warnings) || !generated.warnings.every(warning => typeof warning === 'string'))) return false;
+    if (generated.source !== undefined && !['real', 'mock'].includes(String(generated.source))) return false;
   }
   return true;
 }
@@ -27,7 +30,7 @@ function isBatch(value: unknown): value is BatchRecord {
 function isWorkspace(value: unknown): value is Workspace {
   return isRecord(value) && hasStrings(value, ['activeId', 'templateId', 'batchName']) && Array.isArray(value.items) && value.items.every(isProduct) && (value.batchId === null || typeof value.batchId === 'string') && (value.batchCreatedAt === null || typeof value.batchCreatedAt === 'string');
 }
-const recoverItem = (item: ProductItem): ProductItem => ({ ...item, status: item.status === 'generating' ? (item.generated ? 'generated' : 'draft') : item.status });
+const recoverItem = (item: ProductItem): ProductItem => ({ ...item, status: ['generating', 'queued'].includes(item.status) ? (item.generated?.seoTitle.trim() ? 'generated' : 'draft') : item.status });
 
 export function loadState(): { state: StudioState; error?: string } {
   try {

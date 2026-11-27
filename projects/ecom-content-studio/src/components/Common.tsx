@@ -5,9 +5,9 @@ import type { ProductItem, ToastItem } from '../types';
 
 export function Spinner({ size = 16 }: { size?: number }) { return <LoaderCircle size={size} className="animate-spin" aria-hidden="true" />; }
 
-export function StatusBadge({ status }: { status: ProductItem['status'] }) {
-  const labels = { draft: '未生成', generating: '生成中', generated: '已生成', approved: '已定稿' };
-  const Icon = status === 'generating' ? LoaderCircle : status === 'approved' ? CheckCircle2 : status === 'generated' ? Check : Circle;
+export function StatusBadge({ status, ai = false }: { status: ProductItem['status']; ai?: boolean }) {
+  const labels = { draft: '未生成', queued: '排队中', generating: ai ? 'AI 生成中…' : '生成中', generated: '已生成', approved: '已定稿', failed: '失败可重试' };
+  const Icon = status === 'generating' ? LoaderCircle : status === 'failed' ? TriangleAlert : status === 'approved' ? CheckCircle2 : status === 'generated' ? Check : Circle;
   return <span className={`status-badge status-${status}`}><Icon size={12} className={status === 'generating' ? 'animate-spin' : ''} />{labels[status]}</span>;
 }
 

@@ -31,8 +31,9 @@ function workerHarness({ online = true, varyAssets = false } = {}) {
   });
   const navigate = (query = '') => new Promise<Response>(resolve => events.fetch({ request: { url: scope + query, method: 'GET', mode: 'navigate' }, respondWith: (response: Promise<Response>) => resolve(response) }));
   const asset = (name: string) => new Promise<Response>(resolve => events.fetch({ request: { url: scope + name, method: 'GET', mode: 'cors' }, respondWith: (response: Promise<Response>) => resolve(response) }));
+  const intercepts = (name: string) => { let handled = false; events.fetch({ request: { url: scope + name, method: 'GET', mode: 'cors' }, respondWith: () => { handled = true; } }); return handled; };
   const lifecycle = (name: string) => new Promise<void>(resolve => events[name]({ waitUntil: (work: Promise<void>) => { work.then(resolve); } }));
-  return { stores, prefix, scope, calls, navigate, asset, lifecycle };
+  return { stores, prefix, scope, calls, navigate, asset, intercepts, lifecycle };
 }
 
 test('online navigation fetches fresh HTML rather than a stale bundle manifest', async () => {
@@ -69,4 +70,9 @@ test('offline module requests find precached assets even when Origin headers var
   const worker = workerHarness({ online: false, varyAssets: true });
   worker.stores.set(worker.prefix + 'current', new Map([[worker.scope + 'assets/current.js', new Response('cached script')]]));
   assert.equal(await (await worker.asset('assets/current.js')).text(), 'cached script');
+});
+
+test('AI health requests bypass service-worker caches', () => {
+  const worker = workerHarness();
+  assert.equal(worker.intercepts('api/ai-health'), false);
 });
